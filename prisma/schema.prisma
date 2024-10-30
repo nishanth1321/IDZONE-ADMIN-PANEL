@@ -1,0 +1,391 @@
+// Datasource and Generator
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enum definitions
+enum Gender {
+  Male
+  Female
+  Other
+}
+
+enum UserType {
+  Individual
+  Student
+}
+
+enum SocialLinkName {
+  linkedin
+  medium
+  behance
+  github
+  phone
+  email
+  instagram
+  dribbble
+  twitter
+  youtube
+  pinterest
+  facebook
+  reddit
+  tiktok
+  globe
+  quora
+  discord
+  yelp
+  tripadvisor
+  whatsapp
+  weixin
+  telegram
+  vimeo
+  flickr
+  xing
+  viadeo
+  snapchat
+  whatsappbusiness
+  skype
+}
+
+enum Status {
+  Active
+  Inactive
+  Expired
+}
+
+// Models
+
+model User {
+  user_id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  email           String   @unique
+  password        String
+  phone_number    String?  @unique
+  profile_picture String?
+  is_verified     Boolean  @default(false)
+  gender          Gender
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  DigiCard      DigiCard[]
+  Otp           Otp[]
+  EventResponse EventResponse[]
+  Payment       Payment[]
+
+}
+
+model DigiCard {
+  card_id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  digicardid      String    @unique
+  user_id         String    @db.ObjectId
+  user_type       UserType?
+  register_number String
+  designation     String    @default("Student")
+  division        String?
+  organisation    String?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  User        User          @relation(fields: [user_id], references: [user_id])
+  Templates   Template[]
+  SocialLinks SocialLinks[]
+}
+
+model Orgadmin {
+  user_id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  domain       String?
+  email        String  @unique
+  password     String
+  gender       Gender?
+  phone_number String? @unique
+  logo        String?
+  is_verified Boolean  @default(false)
+  address     String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  organizationUser organizationUser[]
+  OtpRelation  OrgadminToOtp[]
+}
+
+model Eventadmin {
+  user_id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  email        String   @unique
+  password     String
+  gender       Gender?
+  domain       String?
+  phone_number String?  @unique
+  profile      String?
+  is_verified  Boolean  @default(false)
+  address      String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  Event                 Event[]
+  OtpRelation           EventadminToOtp[]
+  EventResponseRelation EventResponseToEventadmin[]
+}
+
+model SocialLinks {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  org_card_id String?        @db.ObjectId
+  digicard_id String?        @db.ObjectId
+  name        SocialLinkName
+  link        String
+
+  OrgCard  OrgCard?  @relation(fields: [org_card_id], references: [org_id])
+  DigiCard DigiCard? @relation(fields: [digicard_id], references: [card_id])
+  
+}
+
+model organizationUser {
+  org_id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  org_name      String
+  admin_user_id String   @db.ObjectId
+  name          String
+  address       String?
+  email         String   @unique
+  profile       String?
+  phone_number  String?
+  gender        Gender?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  admin   Orgadmin  @relation(fields: [admin_user_id], references: [user_id])
+  OrgCard OrgCard[]
+}
+
+model OrgCard {
+  card_id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  org_id        String    @db.ObjectId @unique
+  org_card_id   String    @unique
+  employee_name String
+  employee_id   String    @unique
+  position      String?
+  department    String?
+  issue_date    DateTime
+  expiry_date   DateTime?
+  template_id   String?    @db.ObjectId
+  status        Status    @default(Active)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  // social_links  Json @map("SocialLinks")
+  organizationUser organizationUser @relation(fields: [org_id], references: [org_id])
+  SocialLinks  SocialLinks[]
+  // Store SocialLinks as an array of JSON objects
+  
+}
+
+model Event {
+  event_id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  event_name          String
+  event_manager_id    String   @db.ObjectId
+  description         String?
+  event_form_template Json?
+  start_date          DateTime
+  end_date            DateTime
+  location            String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  Eventadmin    Eventadmin      @relation(fields: [event_manager_id], references: [user_id])
+  EventCard     EventCard[]
+  EventResponse EventResponse[]
+}
+
+model EventCard {
+  card_id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  event_id      String    @db.ObjectId
+  event_card_id String    @unique
+  attendee_name String
+  role          String
+  issue_date    DateTime
+  expiry_date   DateTime?
+  status        Status    @default(Active)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  Event Event @relation(fields: [event_id], references: [event_id])
+
+  TemplateEventCard TemplateEventCard[]
+}
+
+model EventResponse {
+  response_id   String   @id @default(auto()) @map("_id") @db.ObjectId
+  event_id      String   @db.ObjectId
+  user_id       String   @db.ObjectId
+  form_response Json
+  submitted_at  DateTime
+
+  Event Event @relation(fields: [event_id], references: [event_id])
+  User  User  @relation(fields: [user_id], references: [user_id])
+
+  EventResponseToEventadmin EventResponseToEventadmin[]
+}
+
+model Membership {
+  membership_id     String    @id @default(auto()) @map("_id") @db.ObjectId
+  membership_type   String
+  organization_name String?
+  start_date        DateTime
+  end_date          DateTime?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  Member Member[]
+}
+
+model Member {
+  member_id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  membership_id   String    @db.ObjectId
+  member_name     String
+  email           String
+  membership_card Json
+  join_date       DateTime
+  expires_at      DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  Membership Membership @relation(fields: [membership_id], references: [membership_id])
+}
+
+model Template {
+  template_id   String   @id @default(auto()) @map("_id") @db.ObjectId
+  template_type String   @default("card-blue")
+  template_name String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  status        String //ensure its not nullable
+  digicard_id String   @db.ObjectId
+  DigiCard    DigiCard @relation(fields: [digicard_id], references: [card_id])
+  TemplateEventCard TemplateEventCard[]
+   @@unique([digicard_id, template_type])
+}
+
+// Join Models for Many-to-Many Relations
+
+model TemplateEventCard {
+  id            String @id @default(auto()) @map("_id") @db.ObjectId
+  template_id   String @db.ObjectId
+  event_card_id String @db.ObjectId
+
+  Template  Template  @relation(fields: [template_id], references: [template_id])
+  EventCard EventCard @relation(fields: [event_card_id], references: [card_id])
+
+  @@unique([template_id, event_card_id])
+}
+
+model EventResponseToEventadmin {
+  id                String @id @default(auto()) @map("_id") @db.ObjectId
+  event_response_id String @db.ObjectId
+  event_admin_id    String @db.ObjectId
+
+  EventResponse EventResponse @relation(fields: [event_response_id], references: [response_id])
+  Eventadmin    Eventadmin    @relation(fields: [event_admin_id], references: [user_id])
+
+  @@unique([event_response_id, event_admin_id])
+}
+
+// Otp Join Models for Multiple Relations
+
+model OrgadminToOtp {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  orgadmin_id String @db.ObjectId
+  otp_id      String @db.ObjectId
+
+  Orgadmin Orgadmin @relation(fields: [orgadmin_id], references: [user_id])
+  Otp      Otp      @relation(fields: [otp_id], references: [otp_id])
+
+  @@unique([orgadmin_id, otp_id])
+}
+
+model EventadminToOtp {
+  id            String @id @default(auto()) @map("_id") @db.ObjectId
+  eventadmin_id String @db.ObjectId
+  otp_id        String @db.ObjectId
+
+  Eventadmin Eventadmin @relation(fields: [eventadmin_id], references: [user_id])
+  Otp        Otp        @relation(fields: [otp_id], references: [otp_id])
+
+  @@unique([eventadmin_id, otp_id])
+}
+
+model Otp {
+  otp_id     String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id    String   @db.ObjectId
+  otp_code   String
+  email      String   @unique // Marked as unique to use with upsert
+  expires_at DateTime
+  verified   Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  User User @relation(fields: [user_id], references: [user_id])
+
+  OrgadminToOtp   OrgadminToOtp[]
+  EventadminToOtp EventadminToOtp[]
+}
+
+model Subscribe {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  email       String   @unique
+  created_at DateTime @default(now())
+}
+
+
+model Payment {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId             String   @unique// Razorpay Order ID
+  paymentId           String   // Razorpay Payment ID
+  signature           String   // Razorpay Signature for verification
+  amount              Int      // Payment amount in smallest currency unit (e.g., paise for INR)
+  currency            String   // Currency used in the payment (e.g., "INR")
+  receipt             String  // Optional receipt or reference for the order
+  status              String   // Payment status (e.g., "paid", "failed")
+  paymentMethod       String?  // Optional: Payment method used (e.g., "card", "UPI", etc.)
+  name                String   // Name of the user making the payment
+  email               String?  // Email of the user making the payment
+  phone_number        String?  // Phone number of the user making the payment
+  createdAt           DateTime @default(now()) 
+  updatedAt           DateTime @updatedAt 
+  card_id             String  
+  template_type       String   
+  user_id             String   @db.ObjectId  // Foreign key to reference the User model
+  User                User     @relation(fields: [user_id], references: [user_id]) // Relation to User model
+}
+
+model Quatation{
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  quotation_id         String   @unique
+  name String
+  email String
+  description String
+  phone_number String?
+  card_type String
+  created_at           DateTime @default(now()) 
+  updatedAt           DateTime @updatedAt 
+}
+
+model TemplatePricing{
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  template_type              String   @unique
+  price                    Float
+  offer                    Float
+  created_at           DateTime @default(now()) 
+  updatedAt           DateTime @updatedAt
+}
+
+model AdminUser{
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  email               String   @unique
+  password            String
+  role                String   @default("Admin")
+  created_at           DateTime @default(now())
+}
